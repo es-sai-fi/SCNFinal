@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.linalg import solve_triangular, lapack
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import CubicSpline
 
 def evalF(vx, vy, h, nx, ny):
     F = np.zeros((nx - 2, ny - 2))
@@ -325,9 +325,6 @@ def graphSolution(sol, nx, ny, method, numIter):
     plt.ylabel("Índice i")
     plt.show()
 
-
-
-
 def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
     assert numPartitions <= (nx - 2), "Too many partitions for too little rows"
 
@@ -358,36 +355,39 @@ def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
 def isSymmetric(A):
     return np.allclose(A, A.T)
 
-def applySpline(factor, nx, ny, sol, type):
-    valsVx = np.linspace(0, 1, nx)
-    valsVy = np.linspace(0, 1, ny)
+def applySpline(sol, factor):
+    nx, ny = sol.shape
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)   
+    newNx = nx * factor
+    newNy = ny * factor
+    x_new = np.linspace(0, 1, newNx)
+    y_new = np.linspace(0, 1, newNy)
 
-    match type:
-        case 1: 
-            spline = RectBivariateSpline(valsVx, valsVy, sol, kx = 1, ky = 1)
-            
-        case 2:
-            spline = RectBivariateSpline(valsVx, valsVy, sol, kx = 2, ky = 2)
-            
-        case 3:
-            spline = RectBivariateSpline(valsVx, valsVy, sol, kx = 3, ky = 3)
-            
-    newNx, newNy = nx*factor, ny*factor
-    newVx = np.linspace(0, 1, newNx)
-    newVy = np.linspace(0, 1, newNy)
+    # Interpolación por filas
+    interp_rows = np.zeros((nx * factor, ny))
+    for j in range(ny):
+        cs = CubicSpline(x, sol[:, j], bc_type='natural')
+        interp_rows[:, j] = cs(x_new)
 
-    return newNx, newNy, spline(newVx, newVy)
+    # Interpolación por columnas
+    interp_final = np.zeros((nx * factor, ny * factor))
+    for i in range(nx * factor):
+        cs = CubicSpline(y, interp_rows[i, :], bc_type='natural')
+        interp_final[i, :] = cs(y_new)
+
+    return newNx, newNy, interp_final
 
 # Parámetros
 tol = 1e-6
 nx, ny = 60, 20
 h = 0.001
-method = 1
+method = 4
 numPartitions, scalarValue = 6, 1 / 8
 initialVxValue, initialVyValue = 1, 0.001
 
 vx, vy = initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue)
 numIter, sol = solve(vx, vy, h, nx, ny, tol, method)
-newNx, newNy, interpolated_sol = applySpline(100, nx, ny, sol, 3)
+newNx, newNy, interpolatedSolution = applySpline(sol, 100)
 
-graphSolution(interpolated_sol, newNx, newNy, method, numIter)
+graphSolution(interpolatedSolution, newNx, newNy, 4, numIter)
