@@ -3,6 +3,35 @@ import numpy as np
 from scipy.linalg import solve_triangular, lapack
 from scipy.interpolate import CubicSpline
 
+# Función que inicializa las matrices vx y vy de acuerdo a unos valores iniciales,
+# un número de particiones y un valor escalar.
+def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
+    assert numPartitions <= (nx - 2), "Too many partitions for too little rows"
+
+    vx = np.zeros((nx, ny))
+    vy = np.zeros((nx, ny))
+
+    vx[0, :] = initialVxValue
+    vx[:, 0] = 0
+    vx[:, -1] = 0
+
+    vy[0, :] = initialVyValue
+    vy[:, 0] = 0
+    vy[:, -1] = 0
+
+    regionLength = (nx - 2) // numPartitions
+
+    for p in range(numPartitions):
+        start = 1 + p * regionLength
+        end = 1 + (p + 1) * regionLength if p < numPartitions - 1 else nx - 1
+        valueVx = initialVxValue * (scalarValue ** (p + 1))
+        valueVy = initialVyValue * (scalarValue ** (p + 1))
+
+        vx[start:end, 1: ny - 1] = valueVx
+        vy[start:end, 1: ny - 1] = valueVy
+
+    return vx, vy
+
 # Función que crea una matriz F que modelará el sistema y la evalua de acuerdo a parámetros 
 # iniciales (vx, vy, h) siguiendo la ecuación característica del problema.
 def evalF(vx, vy, h, nx, ny):
@@ -22,23 +51,7 @@ def evalF(vx, vy, h, nx, ny):
             )
 
     return F
-
-# Función que verifica si una matriz es diagonalmente dominante.
-def isDiagonallyDominant(J):
-    n = J.shape[0]
-
-    for i in range(n):
-        sumaFila = np.sum(np.abs(J[i, :])) - np.abs(J[i, i])
-        if np.abs(J[i, i]) < sumaFila:
-            print(f"Suma de los valores de la fila: {sumaFila}")
-            print(f"Valor comparado: {J[i, i]}")
-
-    return True
-
-# Función que convierte índices 2D a 1D.
-def getDiagIndex(i, j, ny):
-    return (i - 1) * (ny - 2) + (j - 1)
-
+    
 # Función que crea una matriz J correspondiente al Jacobiano y la evalua de acuerdo
 # a los valores de las matrices vx, vy y el valor h siguiendo los diferentes casos
 # para la derivada definidos.
@@ -69,18 +82,6 @@ def evalJ(vx, vy, h, nx, ny):
                     0.25 - (h / 8) * vy[i, j]
 
     return J
-
-# Función que grafica el Jacobiano.
-def graphJacobian(J):
-    plt.figure(figsize=(12, 7))
-
-    plt.spy(J, markersize=1)
-    plt.title("Estructura del Jacobiano")
-    plt.xlabel("Columnas")
-    plt.ylabel("Filas")
-
-    plt.tight_layout()
-    plt.show()
 
 # Función que aplica Newton-Raphson. Toma argumentos como las matrices
 # de velocidad, vx y vy, el step, h, las dimensiones de la matriz, nx y ny,
@@ -315,60 +316,6 @@ def gaussSeidel(A, b, x0=None, M=500, tol=1e-6):
         f"Gauss-Seidel no convergió en {M} iteraciones, norma infinito = {normInfX}")
     return x
 
-# Función que grafica la solución final del problema.
-def graphSolution(sol, nx, ny, method, numIter):
-    methods = {
-        1: "Gauss-Jordan (LU)",
-        2: "Richardson",
-        3: "Jacobi",
-        4: "Gauss-Seidel",
-        5: "Gradiente Descendiente",
-        6: "Gradiente Conjugado"
-    }
-
-    method_name = methods.get(method, "Método Desconocido")
-    
-    plt.figure(figsize=(12, 5))
-    plt.imshow(sol.T, aspect="auto", cmap="jet", extent=[0, nx - 1, 0, ny - 1])
-    plt.colorbar(label="$v_x$")
-    plt.title(f"Distribución de $v_x$ — Método: {method_name} — Iteraciones: {numIter}")
-    plt.xlabel("Índice j")
-    plt.ylabel("Índice i")
-    plt.show()
-
-# Función que inicializa las matrices vx y vy de acuerdo a unos valores iniciales,
-# un número de particiones y un valor escalar.
-def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
-    assert numPartitions <= (nx - 2), "Too many partitions for too little rows"
-
-    vx = np.zeros((nx, ny))
-    vy = np.zeros((nx, ny))
-
-    vx[0, :] = initialVxValue
-    vx[:, 0] = 0
-    vx[:, -1] = 0
-
-    vy[0, :] = initialVyValue
-    vy[:, 0] = 0
-    vy[:, -1] = 0
-
-    regionLength = (nx - 2) // numPartitions
-
-    for p in range(numPartitions):
-        start = 1 + p * regionLength
-        end = 1 + (p + 1) * regionLength if p < numPartitions - 1 else nx - 1
-        valueVx = initialVxValue * (scalarValue ** (p + 1))
-        valueVy = initialVyValue * (scalarValue ** (p + 1))
-
-        vx[start:end, 1: ny - 1] = valueVx
-        vy[start:end, 1: ny - 1] = valueVy
-
-    return vx, vy
-
-# Función que verifica si una matriz es simétrica.
-def isSymmetric(A):
-    return np.allclose(A, A.T)
-
 # Función que aplica un spline cúbico lineal a una matriz haciendo
 # uso de un factor de reescalamiento dado.
 def applySpline(sol, factor):
@@ -393,6 +340,59 @@ def applySpline(sol, factor):
         interp_final[i, :] = cs(y_new)
 
     return newNx, newNy, interp_final
+
+# Función que grafica el Jacobiano.
+def graphJacobian(J):
+    plt.figure(figsize=(12, 7))
+
+    plt.spy(J, markersize=1)
+    plt.title("Estructura del Jacobiano")
+    plt.xlabel("Columnas")
+    plt.ylabel("Filas")
+
+    plt.tight_layout()
+    plt.show()
+
+# Función que verifica si una matriz es diagonalmente dominante.
+def isDiagonallyDominant(J):
+    n = J.shape[0]
+
+    for i in range(n):
+        sumaFila = np.sum(np.abs(J[i, :])) - np.abs(J[i, i])
+        if np.abs(J[i, i]) < sumaFila:
+            print(f"Suma de los valores de la fila: {sumaFila}")
+            print(f"Valor comparado: {J[i, i]}")
+
+    return True
+
+# Función que grafica la solución final del problema.
+def graphSolution(sol, nx, ny, method, numIter):
+    methods = {
+        1: "Gauss-Jordan (LU)",
+        2: "Richardson",
+        3: "Jacobi",
+        4: "Gauss-Seidel",
+        5: "Gradiente Descendiente",
+        6: "Gradiente Conjugado"
+    }
+
+    method_name = methods.get(method, "Método Desconocido")
+    
+    plt.figure(figsize=(12, 5))
+    plt.imshow(sol.T, aspect="auto", cmap="jet", extent=[0, nx - 1, 0, ny - 1])
+    plt.colorbar(label="$v_x$")
+    plt.title(f"Distribución de $v_x$ — Método: {method_name} — Iteraciones: {numIter}")
+    plt.xlabel("Índice j")
+    plt.ylabel("Índice i")
+    plt.show()
+
+# Función que convierte índices 2D a 1D.
+def getDiagIndex(i, j, ny):
+    return (i - 1) * (ny - 2) + (j - 1)
+
+# Función que verifica si una matriz es simétrica.
+def isSymmetric(A):
+    return np.allclose(A, A.T)
 
 # Parámetros
 tol = 1e-6
