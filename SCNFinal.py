@@ -3,6 +3,8 @@ import numpy as np
 from scipy.linalg import solve_triangular, lapack
 from scipy.interpolate import CubicSpline
 
+# Función que crea una matriz F que modelará el sistema y la evalua de acuerdo a parámetros 
+# iniciales (vx, vy, h) siguiendo la ecuación característica del problema.
 def evalF(vx, vy, h, nx, ny):
     F = np.zeros((nx - 2, ny - 2))
 
@@ -21,7 +23,7 @@ def evalF(vx, vy, h, nx, ny):
 
     return F
 
-
+# Función que verifica si una matriz es diagonalmente dominante.
 def isDiagonallyDominant(J):
     n = J.shape[0]
 
@@ -33,11 +35,13 @@ def isDiagonallyDominant(J):
 
     return True
 
-
+# Función que convierte índices 2D a 1D.
 def getDiagIndex(i, j, ny):
     return (i - 1) * (ny - 2) + (j - 1)
 
-
+# Función que crea una matriz J correspondiente al Jacobiano y la evalua de acuerdo
+# a los valores de las matrices vx, vy y el valor h siguiendo los diferentes casos
+# para la derivada definidos.
 def evalJ(vx, vy, h, nx, ny):
     N = (nx - 2) * (ny - 2)
     J = np.zeros((N, N))
@@ -66,7 +70,7 @@ def evalJ(vx, vy, h, nx, ny):
 
     return J
 
-
+# Función que grafica el Jacobiano.
 def graphJacobian(J):
     plt.figure(figsize=(12, 7))
 
@@ -78,7 +82,10 @@ def graphJacobian(J):
     plt.tight_layout()
     plt.show()
 
-
+# Función que aplica Newton-Raphson. Toma argumentos como las matrices
+# de velocidad, vx y vy, el step, h, las dimensiones de la matriz, nx y ny,
+# la tolerancia para el criterio de parada, tol, el método a utilizar, method, y 
+# el máximo número de iteraciones, maxIter.
 def solve(vx, vy, h, nx, ny, tol, method, maxIter=1000):
     for k in range(maxIter):
         F = evalF(vx, vy, h, nx, ny)
@@ -120,13 +127,15 @@ def solve(vx, vy, h, nx, ny, tol, method, maxIter=1000):
     )
     return maxIter, vx
 
-
+# Función que hace uso de lapack.dgesv para encontrar el vector de
+# corrección.
 def gaussJordan(A, b):
     _, _, x, _ = lapack.dgesv(A, b)
 
     return x
 
-
+# Función que aplica el método iterativo Richardson para el cálculo
+# del vector de corrección
 def richardson(A, b, x0=None, M=500, tol=1e-6):
     n = len(b)
     I = np.eye(n)
@@ -162,7 +171,8 @@ def richardson(A, b, x0=None, M=500, tol=1e-6):
         f"Richardson no convergió en {M} iteraciones, norma infinito = {normInfX}")
     return x
 
-
+# Función que aplica el método iterativo Jacobi para el cálculo
+# del vector de corrección
 def jacobi(A, b, x0=None, M=500, tol=1e-6):
     n = len(b)
     I = np.eye(n)
@@ -199,7 +209,8 @@ def jacobi(A, b, x0=None, M=500, tol=1e-6):
         f"Jacobi no convergió en {M} iteraciones, norma infinito = {normInfX}")
     return x
 
-
+# Función que aplica el método de Krylov Grad. Conjugado para el cálculo
+# del vector de corrección
 def conjugateGradient(A, b, x0=None, M=500, tol=1e-6):
     n = len(b)
 
@@ -236,7 +247,8 @@ def conjugateGradient(A, b, x0=None, M=500, tol=1e-6):
     )
     return x
 
-
+# Función que aplica el método de Krylov Grad. Descendiente para el cálculo
+# del vector de corrección
 def descendantGradient(A, b, x0=None, M=500, tol=1e-6):
     n = len(b)
 
@@ -265,7 +277,8 @@ def descendantGradient(A, b, x0=None, M=500, tol=1e-6):
     )
     return x
 
-
+# Función que aplica el método iterativo Gauss-Seidel para el cálculo
+# del vector de corrección
 def gaussSeidel(A, b, x0=None, M=500, tol=1e-6):
     n = len(b)
     I = np.eye(n)
@@ -302,9 +315,7 @@ def gaussSeidel(A, b, x0=None, M=500, tol=1e-6):
         f"Gauss-Seidel no convergió en {M} iteraciones, norma infinito = {normInfX}")
     return x
 
-
-import matplotlib.pyplot as plt
-
+# Función que grafica la solución final del problema.
 def graphSolution(sol, nx, ny, method, numIter):
     methods = {
         1: "Gauss-Jordan (LU)",
@@ -325,6 +336,8 @@ def graphSolution(sol, nx, ny, method, numIter):
     plt.ylabel("Índice i")
     plt.show()
 
+# Función que inicializa las matrices vx y vy de acuerdo a unos valores iniciales,
+# un número de particiones y un valor escalar.
 def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
     assert numPartitions <= (nx - 2), "Too many partitions for too little rows"
 
@@ -352,9 +365,12 @@ def initVxVy(numPartitions, scalarValue, initialVxValue, initialVyValue):
 
     return vx, vy
 
+# Función que verifica si una matriz es simétrica.
 def isSymmetric(A):
     return np.allclose(A, A.T)
 
+# Función que aplica un spline cúbico lineal a una matriz haciendo
+# uso de un factor de reescalamiento dado.
 def applySpline(sol, factor):
     nx, ny = sol.shape
     x = np.linspace(0, 1, nx)
