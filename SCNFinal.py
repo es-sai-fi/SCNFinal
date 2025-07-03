@@ -319,25 +319,67 @@ def gaussSeidel(A, b, x0=None, M=500, tol=1e-6):
 # Función que aplica un spline cúbico lineal a una matriz haciendo
 # uso de un factor de reescalamiento dado.
 def applySpline(sol, factor):
+    # Se toman las dimensiones de la solución.
     nx, ny = sol.shape
+
+    # Se crean rangos de nx y ny números de 0 hasta 1.
+    # Ejemplo: 0, 1/59, 2/59, ... 59/59. 
     x = np.linspace(0, 1, nx)
     y = np.linspace(0, 1, ny)   
+
+    # Se calculan las nuevas dimensiones de la matriz.
     newNx = nx * factor
     newNy = ny * factor
+
+    """
+    Se crean otra vez rangos pero ahora para las nuevas
+    dimensiones.
+    """
     x_new = np.linspace(0, 1, newNx)
     y_new = np.linspace(0, 1, newNy)
 
     # Interpolación por filas
+
+    """
+    Se crea una matriz auxiliar de tamaño (nx * factor, ny) donde
+    se guardarán las filas interpoladas.
+    """
     interp_rows = np.zeros((nx * factor, ny))
     for j in range(ny):
-        cs = CubicSpline(x, sol[:, j], bc_type='natural')
-        interp_rows[:, j] = cs(x_new)
+        """
+        Se calcula el spline. El primer argumento es la variable
+        independiente, el segundo la variable dependiente.
+        """
+        spline = CubicSpline(x, sol[:, j], bc_type='natural')
+
+        """
+        Se evalua el spline en el rango definido anteriormente y
+        se guarda en la matriz auxiliar.
+        """
+        interp_rows[:, j] = spline(x_new)
 
     # Interpolación por columnas
+
+    """
+    Se crea una matriz auxiliar de tamaño (nx * factor, ny * factor) donde
+    se guardará el resultado final
+    """
     interp_final = np.zeros((nx * factor, ny * factor))
     for i in range(nx * factor):
-        cs = CubicSpline(y, interp_rows[i, :], bc_type='natural')
-        interp_final[i, :] = cs(y_new)
+        """ 
+        Se calcula el spline. El primer argumento es la variable
+        independiente, el segundo la variable dependiente. Nótese que
+        ya no se utiliza la matriz sol para la variable dependiente
+        puesto que ahora se tiene que tomar en cuenta las filas ya
+        interpoladas.
+        """
+        spline = CubicSpline(y, interp_rows[i, :], bc_type='natural')
+        
+        """
+        Se evalua el spline en el rango definido anteriormente y
+        se guarda en la matriz final.
+        """
+        interp_final[i, :] = spline(y_new)
 
     return newNx, newNy, interp_final
 
