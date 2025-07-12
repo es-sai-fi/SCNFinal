@@ -330,54 +330,24 @@ def applySpline(sol, factor):
     newNx = nx * factor
     newNy = ny * factor
 
-    """
-    Se crean otra vez rangos pero ahora para las nuevas
-    dimensiones.
-    """
+    # Rango de puntos intermedios (equiespeciados).
     x_new = np.linspace(0, nx - 1, newNx)
     y_new = np.linspace(0, ny - 1, newNy)
     
     # Interpolación por filas
 
-    """
-    Se crea una matriz auxiliar de tamaño (nx * factor, ny) donde
-    se guardarán las filas interpoladas.
-    """
     interp_rows = np.zeros((newNx, ny))
     for j in range(ny):
-        """
-        Se calcula el spline. El primer argumento es la variable
-        independiente, el segundo la variable dependiente.
-        """
         spline = CubicSpline(x, sol[:, j], bc_type='natural')
 
-        """
-        Se evalua el spline en el rango definido anteriormente y
-        se guarda en la matriz auxiliar.
-        """
         interp_rows[:, j] = spline(x_new)
 
     # Interpolación por columnas
 
-    """
-    Se crea una matriz auxiliar de tamaño (nx * factor, ny * factor) donde
-    se guardará el resultado final
-    """
     interp_final = np.zeros((newNx, newNy))
     for i in range(nx * factor):
-        """ 
-        Se calcula el spline. El primer argumento es la variable
-        independiente, el segundo la variable dependiente. Nótese que
-        ya no se utiliza la matriz sol para la variable dependiente
-        puesto que ahora se tiene que tomar en cuenta las filas ya
-        interpoladas.
-        """
         spline = CubicSpline(y, interp_rows[i, :], bc_type='natural')
         
-        """
-        Se evalua el spline en el rango definido anteriormente y
-        se guarda en la matriz final.
-        """
         interp_final[i, :] = spline(y_new)
 
     return newNx, newNy, interp_final
