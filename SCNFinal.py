@@ -322,10 +322,9 @@ def applySpline(sol, factor):
     # Se toman las dimensiones de la solución.
     nx, ny = sol.shape
 
-    # Se crean rangos de nx y ny números de 0 hasta 1.
-    # Ejemplo: 0, 1/59, 2/59, ... 59/59. 
-    x = np.linspace(0, 1, nx)
-    y = np.linspace(0, 1, ny)   
+    # Se crean rangos de de 0 hasta Nx y Ny.
+    x = np.arange(nx)
+    y = np.arange(ny)
 
     # Se calculan las nuevas dimensiones de la matriz.
     newNx = nx * factor
@@ -335,16 +334,16 @@ def applySpline(sol, factor):
     Se crean otra vez rangos pero ahora para las nuevas
     dimensiones.
     """
-    x_new = np.linspace(0, 1, newNx)
-    y_new = np.linspace(0, 1, newNy)
-
+    x_new = np.linspace(0, nx - 1, newNx)
+    y_new = np.linspace(0, ny - 1, newNy)
+    
     # Interpolación por filas
 
     """
     Se crea una matriz auxiliar de tamaño (nx * factor, ny) donde
     se guardarán las filas interpoladas.
     """
-    interp_rows = np.zeros((nx * factor, ny))
+    interp_rows = np.zeros((newNx, ny))
     for j in range(ny):
         """
         Se calcula el spline. El primer argumento es la variable
@@ -364,7 +363,7 @@ def applySpline(sol, factor):
     Se crea una matriz auxiliar de tamaño (nx * factor, ny * factor) donde
     se guardará el resultado final
     """
-    interp_final = np.zeros((nx * factor, ny * factor))
+    interp_final = np.zeros((newNx, newNy))
     for i in range(nx * factor):
         """ 
         Se calcula el spline. El primer argumento es la variable
