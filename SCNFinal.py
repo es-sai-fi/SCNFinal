@@ -335,7 +335,6 @@ def applySpline(sol, factor):
     y_new = np.linspace(0, ny - 1, newNy)
     
     # Interpolación por filas
-
     interp_rows = np.zeros((newNx, ny))
     for j in range(ny):
         spline = CubicSpline(x, sol[:, j], bc_type='natural')
@@ -343,7 +342,6 @@ def applySpline(sol, factor):
         interp_rows[:, j] = spline(x_new)
 
     # Interpolación por columnas
-
     interp_final = np.zeros((newNx, newNy))
     for i in range(nx * factor):
         spline = CubicSpline(y, interp_rows[i, :], bc_type='natural')
